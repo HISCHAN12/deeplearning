@@ -2,6 +2,7 @@
 
 ## Team / Student
 
+- Student ID: 22000708
 - Name: Heechan Jung
 - Course: Deep Learning Term Project
 
