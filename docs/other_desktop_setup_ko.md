@@ -1,51 +1,46 @@
-# 다른 데스크탑에서 실행하는 방법
+# 다른 Windows 데스크톱에서 실행하는 방법
 
-이 문서는 TFT가 이미 설치된 다른 컴퓨터에서 프로젝트를 실행하고, 게임 실행 상태를 확인하는 절차이다.
+이 문서는 TFT가 설치된 Windows PC에서 로컬 웹 advisor prototype을 실행하는 절차다.
 
-## 1. 저장소 받기
+## 1. 준비 사항
 
-```bash
+- Python 3.10 이상
+- Git
+- 인터넷 연결
+
+PowerShell에서 다음 명령으로 설치 여부를 확인한다.
+
+```powershell
+python --version
+git --version
+```
+
+`python`을 실행했을 때 Microsoft Store만 열리거나 버전이 표시되지 않으면 Python을 먼저 설치한다. 설치 과정에서 `Add python.exe to PATH`를 선택한다.
+
+## 2. 저장소 받기
+
+```powershell
 git clone https://github.com/HISCHAN12/deeplearning.git
 cd deeplearning
+python -m pip install -r requirements.txt
 ```
 
-## 2. Python 의존성 설치
+## 3. 기본 데모와 테스트
 
-```bash
-python3 -m pip install -r requirements.txt
+```powershell
+python -m unittest discover -s tests
+python -m src.tft_advisor.train_demo
 ```
 
-필요한 외부 라이브러리는 `numpy`뿐이다.
+기본 데모는 합성 데이터를 80% 학습용과 20% 평가용으로 분리한다. 실행 후 hold-out placement accuracy, hold-out Top 4 accuracy, 추천 행동이 출력되고 `outputs/demo_result.json`이 생성된다.
 
-## 3. 기본 딥러닝 데모 실행
+## 4. 로컬 웹 advisor 실행
 
-```bash
-python3 -m src.tft_advisor.train_demo
+```powershell
+python -m src.tft_advisor.live_advisor
 ```
 
-정상 실행되면 다음 정보가 출력된다.
-
-- Autoencoder reconstruction loss
-- Placement prediction accuracy
-- Top 4 accuracy
-- 추천 action
-- `outputs/demo_result.json`
-
-## 4. 로컬 실시간 advisor 실행
-
-```bash
-python3 -m src.tft_advisor.live_advisor
-```
-
-브라우저에서 다음 주소를 연다.
-
-```text
-http://127.0.0.1:8000
-```
-
-화면에서 meta-deck과 board positioning을 선택하면 2초마다 추천 결과가 갱신된다.
-
-정상 실행되면 터미널에 다음과 비슷하게 출력된다.
+정상적으로 시작되면 다음 메시지가 표시된다.
 
 ```text
 Starting TFT live advisor...
@@ -55,78 +50,82 @@ TFT live advisor running at http://127.0.0.1:8000
 Press Ctrl+C to stop.
 ```
 
-만약 8000번 포트가 이미 사용 중이면 다음처럼 다른 포트로 실행할 수 있다.
+브라우저에서 다음 주소를 연다.
 
-```bash
-TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
+```text
+http://127.0.0.1:8000
 ```
 
-이 경우 브라우저에서는 `http://127.0.0.1:8001`을 연다.
+화면에서 meta-deck과 board positioning을 선택하면 predicted placement, predicted Top 4 probability, cluster, recommended action이 갱신된다.
 
-Windows PowerShell에서는 위 macOS/Linux 명령 대신 다음처럼 실행한다.
+## 5. TFT 위에 오버레이로 실행
+
+```powershell
+python -m src.tft_advisor.overlay_advisor
+```
+
+오버레이 기능:
+
+- TFT 화면 위에 항상 표시
+- 반투명·테두리 없는 창
+- 상단 영역을 드래그해서 이동
+- `−` 버튼으로 접기
+- `×` 버튼으로 종료
+- 메타 덱과 보드 배치를 수동 선택
+- 예측 등수, Top 4 확률, 군집, 추천 행동 표시
+- 1~8등 확률 분포 표시
+- 2초마다 클라이언트 상태와 결과 갱신
+
+TFT는 `창 모드` 또는 `테두리 없는 창 모드`를 권장한다. 독점 전체화면에서는 Windows 데스크톱 오버레이가 게임 뒤에 가려질 수 있다.
+
+게임에서 보드가 바뀌어도 오버레이가 자동으로 읽지는 않는다. 실제 상태에 맞게 오버레이의 메타 덱과 보드 배치를 직접 변경해야 한다.
+
+## 6. 포트 변경
+
+8000번 포트가 사용 중이면 PowerShell에서 다음과 같이 실행한다.
 
 ```powershell
 $env:TFT_ADVISOR_PORT=8001
 python -m src.tft_advisor.live_advisor
 ```
 
-또는 포트를 바꾸지 않고 기본 포트로 실행하려면 다음만 입력한다.
+브라우저 주소는 `http://127.0.0.1:8001`이다.
+
+## 7. Riot Client 감지
+
+프로그램은 다음 순서로 League Client lockfile을 찾는다.
+
+1. `TFT_RIOT_LOCKFILE` 환경 변수
+2. 일반적인 Windows 설치 경로
+3. 실행 중인 League Client 프로세스의 설치 폴더
+
+League of Legends를 다른 드라이브에 설치했다면 lockfile 경로를 직접 지정한다.
 
 ```powershell
+$env:TFT_RIOT_LOCKFILE="D:\Riot Games\League of Legends\lockfile"
 python -m src.tft_advisor.live_advisor
 ```
 
-## 5. TFT 실행 상태 확인
+클라이언트를 찾으면 `Riot client detected`, 찾지 못하면 `Manual demo mode`가 표시된다.
 
-1. Riot Client 또는 League of Legends/TFT를 실행한다.
-2. 위의 live advisor 서버를 실행한다.
-3. `http://127.0.0.1:8000`에서 상단 상태 메시지를 확인한다.
+## 8. 정확한 구현 범위
 
-상태 메시지가 다음처럼 보이면 클라이언트 감지가 된 것이다.
-
-```text
-Riot client detected
-```
-
-클라이언트가 감지되지 않으면 다음처럼 표시된다.
-
-```text
-Manual demo mode
-```
-
-## 6. 중요한 구현 범위
-
-현재 프로젝트는 과제 제출용 prototype이다.
-
-가능한 것:
+현재 가능한 기능:
 
 - 로컬 웹 advisor 실행
-- TFT/League client lockfile 감지 시도
-- meta-deck 선택 기반 placement 예측
-- board positioning 선택 기반 추천 결과 갱신
-- OBS browser source로 overlay처럼 표시
+- 선택한 sample meta-deck과 board style 기반 예측
+- 8개 placement 확률과 Top 4 probability 표시
+- meta-deck cluster 기반 다음 행동 추천
+- Riot/League Client 실행 상태 감지 시도
+- OBS browser source를 이용한 화면 배치
 
-아직 자동화하지 않은 것:
+현재 구현되지 않은 기능:
 
-- 실제 게임 화면에서 챔피언/아이템/증강체 자동 인식
-- 현재 내 보드를 OCR/screen recognition으로 읽기
-- TFT 클라이언트 내부 상태와 완전 자동 연동
+- 실제 TFT 보드의 챔피언, 아이템, 증강체 자동 인식
+- 현재 게임 상태를 Riot API에서 실시간으로 가져오기
+- OCR 또는 screen recognition
+- 게임 위에 직접 결합되는 상용 overlay
 
-따라서 발표에서는 다음처럼 설명하면 정확하다.
+발표에서는 다음과 같이 설명하는 것이 정확하다.
 
-> 본 프로젝트는 실제 TFT 클라이언트와 완전 자동으로 결합된 상용 오버레이가 아니라, 로컬 웹 기반 실시간 advisor prototype이다. Riot 클라이언트 실행 여부는 감지하고, 추천 입력은 안정적인 데모를 위해 수동 선택값을 사용한다. 향후 screen recognition 또는 Riot API 연동으로 자동 보드 인식을 확장할 수 있다.
-
-## 7. 포트가 이미 사용 중일 때
-
-기본 주소는 `127.0.0.1:8000`이다. 만약 다른 프로그램이 8000번 포트를 사용 중이면 아래처럼 다른 포트로 실행한다.
-
-```bash
-TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
-```
-
-Windows PowerShell:
-
-```powershell
-$env:TFT_ADVISOR_PORT=8001
-python -m src.tft_advisor.live_advisor
-```
+> 이 프로젝트는 실제 TFT 보드를 자동 인식하는 상용 오버레이가 아니라 로컬 웹 기반 deep learning advisor prototype입니다. Riot Client 실행 상태는 감지할 수 있지만, 모델 입력은 안정적인 과제 시연을 위해 웹에서 선택한 sample state를 사용합니다.

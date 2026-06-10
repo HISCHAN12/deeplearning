@@ -50,7 +50,9 @@ class LiveAdvisorApp:
                 "nearest_cluster": recommendation.cluster_id,
                 "action": recommendation.action,
                 "expected_placement": round(recommendation.expected_placement, 2),
+                "expected_placement_improvement": round(recommendation.expected_placement_improvement, 2),
                 "top4_rate": round(recommendation.top4_rate, 3),
+                "predicted_top4_probability": round(recommendation.predicted_top4_probability, 3),
                 "predicted_placement": recommendation.predicted_placement,
                 "placement_probabilities": [round(value, 4) for value in recommendation.placement_probabilities],
             },
@@ -62,8 +64,8 @@ class LiveAdvisorApp:
         if status is None:
             return {
                 "mode": "demo_manual",
-                "label": "Manual demo mode",
-                "detail": "TFT/League client lockfile was not detected, so the overlay uses selected sample state.",
+                "label": "수동 데모 모드",
+                "detail": "TFT/League 클라이언트를 찾지 못해 선택한 샘플 상태를 사용합니다.",
             }
         return status
 
@@ -132,25 +134,55 @@ def read_riot_client_status() -> dict[str, Any] | None:
             phase = response.read().decode("utf-8").strip('"')
         return {
             "mode": "riot_client_detected",
-            "label": "Riot client detected",
-            "detail": f"{name} gameflow phase: {phase}",
+            "label": "Riot 클라이언트 감지됨",
+            "detail": f"{name} 게임 진행 상태: {phase}",
         }
     except Exception as exc:
         return {
             "mode": "riot_client_detected",
-            "label": "Riot client detected",
-            "detail": f"Lockfile found, but local API request failed: {exc.__class__.__name__}",
+            "label": "Riot 클라이언트 감지됨",
+            "detail": f"lockfile은 찾았지만 로컬 API 요청에 실패했습니다: {exc.__class__.__name__}",
         }
 
 
 def find_lockfile() -> Path | None:
-    candidates = [
+    candidates: list[Path] = []
+    configured_lockfile = os.environ.get("TFT_RIOT_LOCKFILE")
+    if configured_lockfile:
+        candidates.append(Path(configured_lockfile).expanduser())
+
+    candidates.extend([
+        Path("C:/Riot Games/League of Legends/lockfile"),
+        Path(os.environ.get("PROGRAMFILES", "C:/Program Files")) / "Riot Games/League of Legends/lockfile",
         Path("/Applications/League of Legends.app/Contents/LoL/lockfile"),
         Path.home() / "Applications/League of Legends.app/Contents/LoL/lockfile",
-    ]
+    ])
     for candidate in candidates:
         if candidate.exists():
             return candidate
+
+    if os.name == "nt":
+        try:
+            command = [
+                "powershell.exe",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-CimInstance Win32_Process | "
+                    "Where-Object {$_.Name -like 'LeagueClient*'} | "
+                    "Select-Object -ExpandProperty ExecutablePath"
+                ),
+            ]
+            output = subprocess.check_output(command, text=True, timeout=1.5)
+        except Exception:
+            return None
+        for line in output.splitlines():
+            executable = Path(line.strip())
+            candidate = executable.parent / "lockfile"
+            if candidate.exists():
+                return candidate
+        return None
+
     try:
         output = subprocess.check_output(["pgrep", "-fl", "LeagueClient"], text=True, timeout=0.4)
     except Exception:
@@ -166,11 +198,11 @@ def find_lockfile() -> Path | None:
 def render_html() -> str:
     archetype_options = "\n".join(f'<option value="{name}">{name}</option>' for name in ARCHETYPES)
     return f"""<!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TFT Live Advisor</title>
+  <title>TFT 실시간 어드바이저</title>
   <style>
     :root {{ font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f8fafc; background: #111827; }}
     * {{ box-sizing: border-box; }}
@@ -206,37 +238,37 @@ def render_html() -> str:
   <main>
     <header>
       <div>
-        <h1>TFT Live Advisor</h1>
-        <p class="note">Local project demo for placement prediction and next-action recommendation.</p>
+        <h1>TFT 실시간 어드바이저</h1>
+        <p class="note">최종 등수 예측과 다음 행동 추천을 위한 로컬 프로젝트 데모입니다.</p>
       </div>
-      <div class="status" id="status">Training model...</div>
+      <div class="status" id="status">모델 학습 중...</div>
     </header>
     <div class="layout">
       <aside>
-        <label>Current meta-deck
+        <label>현재 메타 덱
           <select id="archetype">{archetype_options}</select>
         </label>
-        <label>Board positioning
+        <label>보드 배치
           <select id="board">
-            <option value="frontline">frontline carry setup</option>
-            <option value="backline">backline carry setup</option>
-            <option value="corner_carry">corner carry setup</option>
-            <option value="spread">spread board setup</option>
+            <option value="frontline">전방 중심 배치</option>
+            <option value="backline">후방 캐리 배치</option>
+            <option value="corner_carry">구석 캐리 배치</option>
+            <option value="spread">분산 배치</option>
           </select>
         </label>
         <div class="board" id="boardGrid"></div>
-        <p class="note" id="sourceDetail">Waiting for advisor.</p>
+        <p class="note" id="sourceDetail">추천 결과를 불러오는 중입니다.</p>
       </aside>
       <section>
         <div class="metric-grid">
-          <div class="metric"><span>Predicted place</span><strong id="place">-</strong></div>
-          <div class="metric"><span>Top 4 rate</span><strong id="top4">-</strong></div>
-          <div class="metric"><span>Cluster</span><strong id="cluster">-</strong></div>
-          <div class="metric"><span>Model Top 4 acc.</span><strong id="acc">-</strong></div>
+          <div class="metric"><span>예측 등수</span><strong id="place">-</strong></div>
+          <div class="metric"><span>Top 4 예측 확률</span><strong id="top4">-</strong></div>
+          <div class="metric"><span>메타 덱 군집</span><strong id="cluster">-</strong></div>
+          <div class="metric"><span>Top 4 평가 정확도</span><strong id="acc">-</strong></div>
         </div>
         <div class="recommend">
           <div class="action">
-            <span>Recommended next action</span>
+            <span>추천하는 다음 행동</span>
             <strong id="action">-</strong>
           </div>
           <div class="bars" id="bars"></div>
@@ -248,6 +280,13 @@ def render_html() -> str:
     const archetype = document.getElementById('archetype');
     const board = document.getElementById('board');
     const boardGrid = document.getElementById('boardGrid');
+    const actionLabels = {{
+      level_up: '레벨 업',
+      roll_down: '리롤',
+      hold_economy: '골드 유지',
+      slam_item: '아이템 즉시 장착',
+      reposition_carry: '캐리 위치 변경'
+    }};
     const boardPatterns = {{
       frontline: [1,3,5,23,25],
       backline: [9,11,22,24,26],
@@ -272,10 +311,11 @@ def render_html() -> str:
       document.getElementById('status').textContent = data.source.label + ' · ' + data.updated_at;
       document.getElementById('sourceDetail').textContent = data.source.detail;
       document.getElementById('place').textContent = '#' + data.recommendation.predicted_placement;
-      document.getElementById('top4').textContent = Math.round(data.recommendation.top4_rate * 100) + '%';
+      document.getElementById('top4').textContent = Math.round(data.recommendation.predicted_top4_probability * 100) + '%';
       document.getElementById('cluster').textContent = data.recommendation.nearest_cluster;
       document.getElementById('acc').textContent = Math.round(data.metrics.top4_accuracy * 100) + '%';
-      document.getElementById('action').textContent = data.recommendation.action;
+      document.getElementById('action').textContent =
+        actionLabels[data.recommendation.action] || data.recommendation.action;
 
       const bars = document.getElementById('bars');
       bars.innerHTML = '';

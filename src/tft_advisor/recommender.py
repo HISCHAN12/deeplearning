@@ -31,7 +31,9 @@ class Recommendation:
     cluster_id: int
     action: str
     expected_placement: float
+    expected_placement_improvement: float
     top4_rate: float
+    predicted_top4_probability: float
     predicted_placement: int
     placement_probabilities: List[float]
 
@@ -45,34 +47,57 @@ class TFTAdvisor:
         self.cluster_centers: np.ndarray | None = None
         self.action_stats: Dict[int, Dict[str, Dict[str, float]]] = {}
 
-    def fit(self, records: Iterable[MatchRecord]) -> Dict[str, float]:
+    def fit(self, records: Iterable[MatchRecord], test_ratio: float = 0.2, seed: int = 23) -> Dict[str, float]:
         records = list(records)
-        deck_x = np.vstack([record.deck_vector for record in records])
-        boards = np.stack([record.board_grid for record in records])
-        placements = np.array([record.placement - 1 for record in records], dtype=int)
+        if len(records) < 2:
+            raise ValueError("At least two records are required to train and evaluate the advisor.")
 
-        self.autoencoder = Autoencoder(input_dim=deck_x.shape[1])
-        reconstruction_loss = self.autoencoder.fit(deck_x)
-        embeddings = self.autoencoder.encode(deck_x)
-        labels, centers = kmeans(embeddings, n_clusters=self.n_clusters)
+        rng = np.random.default_rng(seed)
+        order = rng.permutation(len(records))
+        test_size = max(1, int(len(records) * test_ratio))
+        test_indices = order[:test_size]
+        train_indices = order[test_size:]
+        if len(train_indices) == 0:
+            raise ValueError("test_ratio leaves no training records.")
+
+        train_records = [records[index] for index in train_indices]
+        test_records = [records[index] for index in test_indices]
+
+        train_decks = np.vstack([record.deck_vector for record in train_records])
+        train_boards = np.stack([record.board_grid for record in train_records])
+        train_placements = np.array([record.placement - 1 for record in train_records], dtype=int)
+        test_decks = np.vstack([record.deck_vector for record in test_records])
+        test_boards = np.stack([record.board_grid for record in test_records])
+        test_placements = np.array([record.placement - 1 for record in test_records], dtype=int)
+
+        self.autoencoder = Autoencoder(input_dim=train_decks.shape[1])
+        reconstruction_loss = self.autoencoder.fit(train_decks)
+        train_embeddings = self.autoencoder.encode(train_decks)
+        labels, centers = kmeans(train_embeddings, n_clusters=self.n_clusters)
         self.cluster_centers = centers
 
-        board_features = self.board_encoder.transform(boards)
-        predictor_x = np.hstack([embeddings, board_features])
-        self.predictor = FeedForwardPlacementNet(input_dim=predictor_x.shape[1])
-        classifier_loss = self.predictor.fit(predictor_x, placements)
+        train_board_features = self.board_encoder.transform(train_boards)
+        train_x = np.hstack([train_embeddings, train_board_features])
+        self.predictor = FeedForwardPlacementNet(input_dim=train_x.shape[1])
+        classifier_loss = self.predictor.fit(train_x, train_placements)
 
-        probs = self.predictor.predict_proba(predictor_x)
+        test_embeddings = self.autoencoder.encode(test_decks)
+        test_board_features = self.board_encoder.transform(test_boards)
+        test_x = np.hstack([test_embeddings, test_board_features])
+        probs = self.predictor.predict_proba(test_x)
         predicted = probs.argmax(axis=1)
-        placement_accuracy = float(np.mean(predicted == placements))
-        top4_accuracy = float(np.mean((predicted <= 3) == (placements <= 3)))
+        placement_accuracy = float(np.mean(predicted == test_placements))
+        top4_probabilities = probs[:, :4].sum(axis=1)
+        top4_accuracy = float(np.mean((top4_probabilities >= 0.5) == (test_placements <= 3)))
 
-        self.action_stats = self._build_action_stats(records, labels)
+        self.action_stats = self._build_action_stats(train_records, labels)
         return {
             "reconstruction_loss": reconstruction_loss,
             "classifier_loss": classifier_loss,
             "placement_accuracy": placement_accuracy,
             "top4_accuracy": top4_accuracy,
+            "train_samples": float(len(train_records)),
+            "test_samples": float(len(test_records)),
         }
 
     def recommend(self, deck_vector: np.ndarray, board_grid: np.ndarray) -> Recommendation:
@@ -94,7 +119,9 @@ class TFTAdvisor:
             cluster_id=cluster_id,
             action=best_action,
             expected_placement=stats["expected_placement"],
+            expected_placement_improvement=stats["expected_placement_improvement"],
             top4_rate=stats["top4_rate"],
+            predicted_top4_probability=float(probs[:4].sum()),
             predicted_placement=predicted_placement,
             placement_probabilities=[float(value) for value in probs],
         )
@@ -110,14 +137,19 @@ class TFTAdvisor:
         for cluster_id in range(self.n_clusters):
             stats[cluster_id] = {}
             cluster_records = [record for record, label in zip(records, labels) if label == cluster_id]
+            cluster_placements = np.array([record.placement for record in cluster_records], dtype=np.float64)
+            cluster_baseline = float(cluster_placements.mean()) if len(cluster_placements) else global_default["expected_placement"]
             for action in ACTIONS:
                 placements = np.array([record.placement for record in cluster_records if record.action == action], dtype=np.float64)
                 if len(placements) == 0:
-                    stats[cluster_id][action] = dict(global_default)
+                    action_stats = dict(global_default)
                 else:
-                    stats[cluster_id][action] = {
+                    action_stats = {
                         "expected_placement": float(placements.mean()),
                         "top4_rate": float(np.mean(placements <= 4)),
                     }
+                action_stats["expected_placement_improvement"] = cluster_baseline - action_stats["expected_placement"]
+                action_stats["support"] = float(len(placements))
+                stats[cluster_id][action] = action_stats
         return stats
 
