@@ -152,6 +152,13 @@ If port 8000 is already in use:
 TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
 ```
 
+On Windows PowerShell, use:
+
+```powershell
+$env:TFT_ADVISOR_PORT=8001
+python -m src.tft_advisor.live_advisor
+```
+
 See `docs/other_desktop_setup_ko.md` for the Korean step-by-step guide.
 
 ## References

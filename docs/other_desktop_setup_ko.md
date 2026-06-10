@@ -63,6 +63,19 @@ TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
 
 이 경우 브라우저에서는 `http://127.0.0.1:8001`을 연다.
 
+Windows PowerShell에서는 위 macOS/Linux 명령 대신 다음처럼 실행한다.
+
+```powershell
+$env:TFT_ADVISOR_PORT=8001
+python -m src.tft_advisor.live_advisor
+```
+
+또는 포트를 바꾸지 않고 기본 포트로 실행하려면 다음만 입력한다.
+
+```powershell
+python -m src.tft_advisor.live_advisor
+```
+
 ## 5. TFT 실행 상태 확인
 
 1. Riot Client 또는 League of Legends/TFT를 실행한다.
@@ -109,4 +122,11 @@ Manual demo mode
 
 ```bash
 TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
+```
+
+Windows PowerShell:
+
+```powershell
+$env:TFT_ADVISOR_PORT=8001
+python -m src.tft_advisor.live_advisor
 ```
