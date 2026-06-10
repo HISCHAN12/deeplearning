@@ -45,6 +45,24 @@ http://127.0.0.1:8000
 
 화면에서 meta-deck과 board positioning을 선택하면 2초마다 추천 결과가 갱신된다.
 
+정상 실행되면 터미널에 다음과 비슷하게 출력된다.
+
+```text
+Starting TFT live advisor...
+Training local prototype model. This usually takes a few seconds.
+Model ready.
+TFT live advisor running at http://127.0.0.1:8000
+Press Ctrl+C to stop.
+```
+
+만약 8000번 포트가 이미 사용 중이면 다음처럼 다른 포트로 실행할 수 있다.
+
+```bash
+TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
+```
+
+이 경우 브라우저에서는 `http://127.0.0.1:8001`을 연다.
+
 ## 5. TFT 실행 상태 확인
 
 1. Riot Client 또는 League of Legends/TFT를 실행한다.
@@ -87,5 +105,8 @@ Manual demo mode
 
 ## 7. 포트가 이미 사용 중일 때
 
-기본 주소는 `127.0.0.1:8000`이다. 만약 다른 프로그램이 8000번 포트를 사용 중이면 `live_advisor.py`의 `PORT = 8000` 값을 다른 번호로 바꾼 뒤 다시 실행한다.
+기본 주소는 `127.0.0.1:8000`이다. 만약 다른 프로그램이 8000번 포트를 사용 중이면 아래처럼 다른 포트로 실행한다.
 
+```bash
+TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
+```

@@ -136,6 +136,22 @@ python3 -m src.tft_advisor.live_advisor
 
 Open `http://127.0.0.1:8000` in a browser. If Riot/League/TFT is running and the local lockfile can be found, the page displays the client detection status. The recommendation itself uses the selected sample state so the project demo remains reliable.
 
+Expected terminal output:
+
+```text
+Starting TFT live advisor...
+Training local prototype model. This usually takes a few seconds.
+Model ready.
+TFT live advisor running at http://127.0.0.1:8000
+Press Ctrl+C to stop.
+```
+
+If port 8000 is already in use:
+
+```bash
+TFT_ADVISOR_PORT=8001 python3 -m src.tft_advisor.live_advisor
+```
+
 See `docs/other_desktop_setup_ko.md` for the Korean step-by-step guide.
 
 ## References

@@ -23,7 +23,8 @@ from .synthetic_data import ACTIONS, ARCHETYPES, generate_matches
 
 
 HOST = "127.0.0.1"
-PORT = 8000
+PORT = int(os.environ.get("TFT_ADVISOR_PORT", "8000"))
+APP: "LiveAdvisorApp | None" = None
 
 
 class LiveAdvisorApp:
@@ -67,9 +68,6 @@ class LiveAdvisorApp:
         return status
 
 
-APP = LiveAdvisorApp()
-
-
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path, _, query = self.path.partition("?")
@@ -77,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_text(render_html(), "text/html; charset=utf-8")
         elif path == "/api/recommend":
             params = parse_query(query)
-            payload = APP.recommend(params.get("archetype", "fast_8_carry"), params.get("board", "frontline"))
+            payload = get_app().recommend(params.get("archetype", "fast_8_carry"), params.get("board", "frontline"))
             self._send_json(payload)
         else:
             self.send_error(404)
@@ -110,6 +108,12 @@ def parse_query(query: str) -> dict[str, str]:
         key, value = part.split("=", 1)
         result[key] = value.replace("+", " ")
     return result
+
+
+def get_app() -> LiveAdvisorApp:
+    if APP is None:
+        raise RuntimeError("Live advisor app has not been initialized.")
+    return APP
 
 
 def read_riot_client_status() -> dict[str, Any] | None:
@@ -294,9 +298,14 @@ def render_html() -> str:
 
 
 def main() -> None:
+    global APP
+    print("Starting TFT live advisor...", flush=True)
+    print("Training local prototype model. This usually takes a few seconds.", flush=True)
+    APP = LiveAdvisorApp()
+    print("Model ready.", flush=True)
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"TFT live advisor running at http://{HOST}:{PORT}")
-    print("Press Ctrl+C to stop.")
+    print(f"TFT live advisor running at http://{HOST}:{PORT}", flush=True)
+    print("Press Ctrl+C to stop.", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -307,4 +316,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
