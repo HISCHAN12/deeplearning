@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from .recommender import TFTAdvisor
+from .game_state import GameState
 from .state_encoder import archetype_deck_vector, board_from_style
 from .synthetic_data import ACTIONS, ARCHETYPES, generate_matches
 
@@ -34,12 +35,18 @@ class LiveAdvisorApp:
         self.metrics = self.advisor.fit(records)
         self.started_at = time.time()
 
-    def recommend(self, archetype: str, board_style: str) -> dict[str, Any]:
+    def recommend(
+        self,
+        archetype: str,
+        board_style: str,
+        game_state: GameState | None = None,
+    ) -> dict[str, Any]:
         if archetype not in ARCHETYPES:
             archetype = "fast_8_carry"
         deck_vector = archetype_deck_vector(archetype)
         board_grid = board_from_style(board_style)
-        recommendation = self.advisor.recommend(deck_vector, board_grid)
+        state = game_state or GameState()
+        recommendation = self.advisor.recommend(deck_vector, board_grid, state.to_vector())
         return {
             "source": self.client_status(),
             "archetype": archetype,
@@ -55,6 +62,7 @@ class LiveAdvisorApp:
                 "predicted_top4_probability": round(recommendation.predicted_top4_probability, 3),
                 "predicted_placement": recommendation.predicted_placement,
                 "placement_probabilities": [round(value, 4) for value in recommendation.placement_probabilities],
+                "reason": recommendation.reason,
             },
             "updated_at": time.strftime("%H:%M:%S"),
         }

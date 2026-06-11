@@ -10,14 +10,16 @@ TFT는 단순히 강한 챔피언 하나를 고르는 게임이 아니라, 챔�
 
 세 번째 단계는 보드 배치 정보입니다. TFT 보드는 4x7 grid로 표현할 수 있습니다. 저는 CNN Chapter 9의 아이디어를 참고해서 고정된 convolution kernel을 보드 위에 적용하고, 앞라인 밀도, 뒷라인 캐리 위치, 좌우 분포 같은 spatial feature를 추출했습니다. 이 부분은 학습 가능한 CNN layer가 아니라 CNN-style feature extractor이며, 향후 PyTorch CNN으로 확장할 수 있습니다.
 
-네 번째 단계는 등수 예측입니다. Autoencoder embedding과 board feature를 합친 뒤, 작은 feedforward neural network로 최종 placement probability를 예측합니다. 1등부터 4등까지의 확률을 더해 Top 4 probability도 계산합니다. 또한 Chapter 7의 regularization과 Chapter 8의 optimization 개념을 반영해 weight decay와 mini-batch gradient descent를 사용했습니다.
+네 번째 단계는 게임 흐름과 등수 예측입니다. 사용자가 현재 스테이지, 체력, 골드, 레벨, 연승 또는 연패, 보드 강도, 대기 아이템을 입력합니다. 새 상태를 반영하면 직전 입력과 비교해 체력, 골드, 레벨, 보드 강도의 변화량도 계산합니다. Autoencoder embedding, board feature, 현재 상태와 변화량을 합친 뒤 작은 feedforward neural network로 최종 placement probability를 예측합니다. 1등부터 4등까지의 확률을 더해 Top 4 probability도 계산합니다.
 
 마지막 단계는 action recommendation입니다. 현재 덱이 어느 cluster에 가까운지 찾고, 그 cluster 안에서 과거에 어떤 행동이 평균 등수와 Top 4 rate를 개선했는지 분석합니다. 추천 후보는 level up, roll down, hold economy, slam item, reposition carry입니다. 예를 들어 bruiser frontline cluster에서는 hold economy가 좋은 평균 성적을 냈다면, advisor는 hold economy를 추천합니다.
 
-이제 데모를 보겠습니다. 터미널에서 `python3 -m src.tft_advisor.train_demo`를 실행하면 합성 match log가 생성되고, 데이터가 80퍼센트 학습용과 20퍼센트 평가용으로 분리됩니다. 출력에는 reconstruction loss, hold-out placement accuracy, hold-out Top 4 accuracy, sample archetype, predicted placement, predicted Top 4 probability, recommended action이 표시됩니다. 고정 seed 기준 hold-out Top 4 accuracy는 약 0.71이며, 정확한 등수 accuracy는 약 0.26입니다.
+이제 데모를 보겠습니다. 터미널에서 `python3 -m src.tft_advisor.train_demo`를 실행하면 합성 match log가 생성되고, 데이터가 80퍼센트 학습용과 20퍼센트 평가용으로 분리됩니다. 출력에는 reconstruction loss, hold-out placement accuracy, hold-out Top 4 accuracy, sample archetype, predicted placement, predicted Top 4 probability, recommended action이 표시됩니다. 고정 seed 기준 정확한 등수 accuracy는 약 0.33, Top 4 accuracy는 약 0.96입니다. 이 높은 Top 4 수치는 체력과 보드 강도 같은 상태-결과 관계가 명시된 합성 데이터에서 규칙을 복원한 결과이며 실제 TFT 성능을 의미하지 않습니다.
 
-이 프로젝트의 실제 데모 방식은 Windows always-on-top 오버레이입니다. `python -m src.tft_advisor.overlay_advisor`를 실행하면 반투명한 오버레이가 TFT 위에 표시됩니다. 오버레이에서 현재 조합과 보드 배치를 선택하면 예측 결과가 즉시 갱신되고, 이후 2초마다 클라이언트 상태와 결과를 다시 확인합니다. Riot 클라이언트가 실행 중이면 local lockfile을 감지해 연결 상태를 표시하지만, 세부 보드 상태는 안정적인 데모를 위해 수동 선택값을 사용합니다.
+이 프로젝트의 실제 데모 방식은 Windows always-on-top 오버레이입니다. `python -m src.tft_advisor.overlay_advisor`를 실행하면 반투명한 오버레이가 TFT 위에 표시됩니다. 사용자는 현재 조합과 보드 배치뿐 아니라 실제 체력, 골드, 레벨과 게임 흐름을 입력합니다. `현재 게임 상태 반영`을 누르면 이전 스냅샷과 비교한 변화량까지 모델에 반영되어 예측과 추천 이유가 갱신됩니다. Riot 클라이언트가 실행 중이면 local lockfile을 감지해 연결 상태를 표시하지만, 게임 화면 자체를 자동 인식하지는 않습니다.
 
 한계점은 현재 데이터가 Riot API 실제 match log가 아니라 재현 가능한 합성 데이터라는 점입니다. 또한 합성 데이터에는 조합별로 미리 정의한 행동 효과가 들어 있으므로, 추천 결과는 통제된 데이터에서 알려진 구조를 복원하는지 확인하는 실험입니다. 실제 게임에서 행동이 성적을 개선한다는 인과적 증거는 아닙니다. 향후에는 Riot API로 match log를 수집하고, PyTorch 모델로 확장하고, 실제 게임 중 수동 입력 또는 화면 인식과 연결하는 방향으로 발전시킬 수 있습니다.
 
 결론적으로 이 프로젝트는 TFT라는 복잡한 전략 게임에 Autoencoder, CNN-style spatial features, Feedforward Network, regularization, optimization을 적용해 승부 예측과 행동 추천을 수행하는 딥러닝 프레임워크입니다.
+
+추가로 정책상 안전한 자동 분석 데모를 위해 녹화 영상 분석 모드를 구현했습니다. OpenCV가 녹화 영상에서 일정 간격으로 프레임을 추출하고, 중앙 보드를 4×7 grid로 나눈 뒤 색상, 밝기, edge density, 프레임 변화량을 계산합니다. 이 모드는 다음 행동을 추천하지 않고 시간대별 예상 등수와 Top 4 확률만 HTML 그래프로 출력합니다. 현재는 정확한 챔피언이나 체력을 인식하는 객체 탐지 및 OCR 모델이 아니라 시각 특징 기반 prototype입니다.

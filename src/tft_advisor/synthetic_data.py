@@ -7,6 +7,8 @@ from typing import Dict, List
 
 import numpy as np
 
+from .game_state import GameState
+
 
 CHAMPIONS = [
     "Ahri",
@@ -75,6 +77,7 @@ ACTIONS = ["level_up", "roll_down", "hold_economy", "slam_item", "reposition_car
 class MatchRecord:
     deck_vector: np.ndarray
     board_grid: np.ndarray
+    state_vector: np.ndarray
     action: str
     placement: int
     archetype: str
@@ -168,7 +171,41 @@ def generate_matches(n_matches: int = 1600, seed: int = 7) -> List[MatchRecord]:
     for _ in range(n_matches):
         archetype = str(rng.choice(names))
         spec = ARCHETYPES[archetype]
-        action_scores = np.array([ACTION_EFFECTS[archetype][action_name] for action_name in ACTIONS])
+        stage = round(float(rng.uniform(2.1, 5.8)), 1)
+        level = int(np.clip(round(3.5 + stage * 0.75 + rng.normal(0, 0.7)), 4, 10))
+        health = int(np.clip(112 - stage * 13 + rng.normal(0, 18), 5, 100))
+        gold = int(np.clip(rng.normal(34, 20), 0, 100))
+        streak = int(rng.integers(-5, 6))
+        board_strength = int(np.clip(rng.normal(6.0, 1.8), 1, 10))
+        unspent_items = int(rng.integers(0, 6))
+        state = GameState(
+            stage=stage,
+            health=health,
+            gold=gold,
+            level=level,
+            streak=streak,
+            board_strength=board_strength,
+            unspent_items=unspent_items,
+            health_delta=int(rng.integers(-24, 1)),
+            gold_delta=int(rng.integers(-30, 31)),
+            level_delta=int(rng.choice([0, 0, 0, 1])),
+            board_strength_delta=int(rng.integers(-2, 3)),
+        )
+
+        contextual_effects = dict(ACTION_EFFECTS[archetype])
+        if health <= 35 or state.health_delta <= -15:
+            contextual_effects["roll_down"] += 0.9
+            contextual_effects["hold_economy"] -= 0.8
+        if gold >= 50 and health >= 55:
+            contextual_effects["hold_economy"] += 0.55
+        if gold >= 30 and level <= 7 and stage >= 3.5:
+            contextual_effects["level_up"] += 0.55
+        if unspent_items >= 3:
+            contextual_effects["slam_item"] += 0.7
+        if streak <= -2 or state.board_strength_delta < 0:
+            contextual_effects["reposition_carry"] += 0.45
+
+        action_scores = np.array([contextual_effects[action_name] for action_name in ACTIONS])
         action_probs = np.exp(action_scores * 1.35)
         action_probs = action_probs / action_probs.sum()
         action = str(rng.choice(ACTIONS, p=action_probs))
@@ -188,9 +225,17 @@ def generate_matches(n_matches: int = 1600, seed: int = 7) -> List[MatchRecord]:
             "bruiser_frontline": 0.15,
             "sniper_item_slam": 0.55,
         }[archetype]
-        score = archetype_base + ACTION_EFFECTS[archetype][action] + board_bonus + rng.normal(0, 0.2)
+        state_score = (
+            0.75 * (health / 100.0)
+            + 0.55 * (board_strength / 10.0)
+            + 0.25 * (level / 10.0)
+            + 0.18 * (streak / 5.0)
+            + 0.12 * (state.board_strength_delta / 5.0)
+            - 0.12 * (stage / 7.0)
+        )
+        score = archetype_base + contextual_effects[action] + board_bonus + state_score + rng.normal(0, 0.2)
         placement = _placement_from_score(score, rng)
 
-        records.append(MatchRecord(deck_vector, board_grid, action, placement, archetype))
+        records.append(MatchRecord(deck_vector, board_grid, state.to_vector(), action, placement, archetype))
 
     return records

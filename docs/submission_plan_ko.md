@@ -50,7 +50,7 @@ python3 -m src.tft_advisor.live_advisor
 
 ### 구현 결정: Windows 항상 위 수동 입력 오버레이
 
-현재 구현은 `tkinter` 기반의 반투명 always-on-top 창을 TFT 위에 표시한다. 사용자는 오버레이에서 meta-deck과 board positioning을 직접 선택하고, 모델은 예측 등수, Top 4 확률, 군집, 추천 행동을 갱신한다.
+현재 구현은 `tkinter` 기반의 반투명 always-on-top 창을 TFT 위에 표시한다. 사용자는 오버레이에서 meta-deck과 board positioning, 스테이지, 체력, 골드, 레벨, 연승/연패, 보드 강도, 대기 아이템을 입력한다. 모델은 현재 상태와 이전 입력 대비 변화량을 함께 사용해 예측 등수, Top 4 확률, 군집, 추천 행동을 갱신한다.
 
 이유는 다음과 같다.
 
@@ -60,6 +60,10 @@ python3 -m src.tft_advisor.live_advisor
 - 상단 드래그, 접기, 종료, 수동 상태 선택을 지원한다.
 
 실행 명령은 `python -m src.tft_advisor.overlay_advisor`이다. Riot/League 클라이언트 lockfile을 감지하면 연결 상태를 표시한다. 하지만 추천에 필요한 세부 보드 상태는 안정적인 과제 데모를 위해 수동 선택값을 사용한다. 완전 자동 보드 인식은 현재 구현 범위가 아니다.
+
+### 추가 구현: 녹화 영상 자동 승부 예측
+
+`python -m src.tft_advisor.video_analysis_app`을 실행하면 TFT 녹화 영상을 선택할 수 있다. OpenCV가 일정 간격으로 프레임을 추출하고 중앙 보드 영역의 색상, 윤곽선, 활성 칸, 프레임 변화량을 분석한다. 결과는 시간대별 예상 등수와 Top 4 확률 그래프로 저장되며, 라이브 행동 추천은 제공하지 않는다.
 
 ### 발표에서 보여줄 데모 흐름
 

@@ -8,6 +8,7 @@ from typing import Dict, Iterable, List
 import numpy as np
 
 from .models import Autoencoder, BoardCNNEncoder, FeedForwardPlacementNet
+from .game_state import neutral_state_vector
 from .synthetic_data import ACTIONS, MatchRecord
 
 
@@ -36,6 +37,7 @@ class Recommendation:
     predicted_top4_probability: float
     predicted_placement: int
     placement_probabilities: List[float]
+    reason: str
 
 
 class TFTAdvisor:
@@ -65,9 +67,11 @@ class TFTAdvisor:
 
         train_decks = np.vstack([record.deck_vector for record in train_records])
         train_boards = np.stack([record.board_grid for record in train_records])
+        train_states = np.vstack([record.state_vector for record in train_records])
         train_placements = np.array([record.placement - 1 for record in train_records], dtype=int)
         test_decks = np.vstack([record.deck_vector for record in test_records])
         test_boards = np.stack([record.board_grid for record in test_records])
+        test_states = np.vstack([record.state_vector for record in test_records])
         test_placements = np.array([record.placement - 1 for record in test_records], dtype=int)
 
         self.autoencoder = Autoencoder(input_dim=train_decks.shape[1])
@@ -77,13 +81,13 @@ class TFTAdvisor:
         self.cluster_centers = centers
 
         train_board_features = self.board_encoder.transform(train_boards)
-        train_x = np.hstack([train_embeddings, train_board_features])
+        train_x = np.hstack([train_embeddings, train_board_features, train_states])
         self.predictor = FeedForwardPlacementNet(input_dim=train_x.shape[1])
         classifier_loss = self.predictor.fit(train_x, train_placements)
 
         test_embeddings = self.autoencoder.encode(test_decks)
         test_board_features = self.board_encoder.transform(test_boards)
-        test_x = np.hstack([test_embeddings, test_board_features])
+        test_x = np.hstack([test_embeddings, test_board_features, test_states])
         probs = self.predictor.predict_proba(test_x)
         predicted = probs.argmax(axis=1)
         placement_accuracy = float(np.mean(predicted == test_placements))
@@ -100,31 +104,82 @@ class TFTAdvisor:
             "test_samples": float(len(test_records)),
         }
 
-    def recommend(self, deck_vector: np.ndarray, board_grid: np.ndarray) -> Recommendation:
+    def recommend(
+        self,
+        deck_vector: np.ndarray,
+        board_grid: np.ndarray,
+        state_vector: np.ndarray | None = None,
+    ) -> Recommendation:
         if self.autoencoder is None or self.predictor is None or self.cluster_centers is None:
             raise RuntimeError("The advisor must be fitted before calling recommend().")
 
         embedding = self.autoencoder.encode(deck_vector.reshape(1, -1))
         board_features = self.board_encoder.transform(board_grid.reshape(1, 4, 7))
-        probs = self.predictor.predict_proba(np.hstack([embedding, board_features]))[0]
+        state = neutral_state_vector() if state_vector is None else state_vector
+        probs = self.predictor.predict_proba(
+            np.hstack([embedding, board_features, state.reshape(1, -1)])
+        )[0]
         predicted_placement = int(probs.argmax() + 1)
 
         distances = ((self.cluster_centers - embedding[0]) ** 2).sum(axis=1)
         cluster_id = int(distances.argmin())
         cluster_stats = self.action_stats[cluster_id]
-        best_action = min(ACTIONS, key=lambda action: cluster_stats[action]["expected_placement"])
+        action_adjustments, reasons = self._state_action_adjustments(state)
+        best_action = min(
+            ACTIONS,
+            key=lambda action: cluster_stats[action]["expected_placement"] - action_adjustments[action],
+        )
         stats = cluster_stats[best_action]
+        adjusted_placement = max(1.0, stats["expected_placement"] - action_adjustments[best_action])
 
         return Recommendation(
             cluster_id=cluster_id,
             action=best_action,
-            expected_placement=stats["expected_placement"],
-            expected_placement_improvement=stats["expected_placement_improvement"],
+            expected_placement=adjusted_placement,
+            expected_placement_improvement=stats["expected_placement_improvement"] + action_adjustments[best_action],
             top4_rate=stats["top4_rate"],
             predicted_top4_probability=float(probs[:4].sum()),
             predicted_placement=predicted_placement,
             placement_probabilities=[float(value) for value in probs],
+            reason=reasons[best_action],
         )
+
+    def _state_action_adjustments(self, state: np.ndarray) -> tuple[Dict[str, float], Dict[str, str]]:
+        health = float(state[1] * 100)
+        gold = float(state[2] * 100)
+        level = float(state[3] * 10)
+        streak = float(state[4] * 5)
+        unspent_items = float(state[6] * 6)
+        health_delta = float(state[7] * 30)
+        board_delta = float(state[10] * 5)
+
+        adjustments = {action: 0.0 for action in ACTIONS}
+        reasons = {
+            "level_up": "현재 군집에서 레벨 업의 평균 성적이 가장 좋습니다.",
+            "roll_down": "현재 군집에서 리롤의 평균 성적이 가장 좋습니다.",
+            "hold_economy": "현재 군집에서 골드 유지의 평균 성적이 가장 좋습니다.",
+            "slam_item": "현재 군집에서 아이템 장착의 평균 성적이 가장 좋습니다.",
+            "reposition_carry": "현재 군집에서 캐리 위치 변경의 평균 성적이 가장 좋습니다.",
+        }
+
+        if health <= 35 or health_delta <= -15:
+            adjustments["roll_down"] += 0.95
+            adjustments["hold_economy"] -= 0.55
+            reasons["roll_down"] = "체력이 낮거나 최근 체력 손실이 커서 즉시 보드 강화가 필요합니다."
+        if gold >= 50 and health >= 55:
+            adjustments["hold_economy"] += 0.65
+            reasons["hold_economy"] = "체력이 안정적이고 50골드 이상이라 이자 운영 가치가 높습니다."
+        if gold >= 30 and level <= 7:
+            adjustments["level_up"] += 0.55
+            reasons["level_up"] = "레벨이 낮고 사용할 골드가 있어 인구수 확장이 유리합니다."
+        if unspent_items >= 3:
+            adjustments["slam_item"] += 0.8
+            reasons["slam_item"] = "대기 중인 아이템이 많아 즉시 전투력으로 전환할 가치가 높습니다."
+        if streak <= -2 or board_delta < 0:
+            adjustments["reposition_carry"] += 0.5
+            reasons["reposition_carry"] = "연패 중이거나 보드 강도가 하락해 배치 조정이 필요합니다."
+
+        return adjustments, reasons
 
     def _build_action_stats(self, records: List[MatchRecord], labels: np.ndarray) -> Dict[int, Dict[str, Dict[str, float]]]:
         stats: Dict[int, Dict[str, Dict[str, float]]] = {}

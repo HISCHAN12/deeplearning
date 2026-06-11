@@ -30,6 +30,7 @@ def main() -> None:
             "predicted_top4_probability": recommendation.predicted_top4_probability,
             "predicted_placement": recommendation.predicted_placement,
             "placement_probabilities": recommendation.placement_probabilities,
+            "reason": recommendation.reason,
         },
     }
 
@@ -54,6 +55,7 @@ def main() -> None:
     print(f"Cluster expected placement:      {recommendation.expected_placement:.2f}")
     print(f"Expected placement improvement:  {recommendation.expected_placement_improvement:+.2f}")
     print(f"Cluster Top 4 rate:              {recommendation.top4_rate:.3f}")
+    print(f"Recommendation reason:           {recommendation.reason}")
     print("Saved outputs/demo_result.json")
 
 
