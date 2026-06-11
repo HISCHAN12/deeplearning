@@ -12,8 +12,8 @@
 
 ## Project Links
 
-- GitHub Pages: `https://hischan12.github.io/deeplearning/`
-- YouTube : youtube.com/watch?v=1gKApD5DP4Q&feature=youtu.be
+- GitHub Pages: `https://hischan12.github.io/deeplearning/project/`
+- YouTube: [Project Presentation](https://www.youtube.com/watch?v=1gKApD5DP4Q)
 
 
 ## Introduction
@@ -162,6 +162,40 @@ Dependencies:
 
 - NumPy
 - OpenCV headless
+
+## Project Files and Execution
+
+All implementation, test, web-page, and configuration files are organized in the [`project`](project/) folder.
+
+```text
+project/
+  index.html
+  styles.css
+  requirements.txt
+  src/tft_advisor/
+  tests/
+```
+
+Install and run from the project folder:
+
+```powershell
+git clone https://github.com/HISCHAN12/deeplearning.git
+cd deeplearning\project
+python -m pip install -r requirements.txt
+python -m src.tft_advisor.video_analysis_app
+```
+
+Run the tests:
+
+```powershell
+python -m unittest discover -s tests
+```
+
+Run the command-line recording analyzer:
+
+```powershell
+python -m src.tft_advisor.video_analyzer "C:\Videos\tft_game.mp4" --interval 5
+```
 
 
 
