@@ -170,6 +170,7 @@ All implementation, test, web-page, and configuration files are organized in the
 ```text
 project/
   index.html
+  video_analysis.html
   styles.css
   requirements.txt
   src/tft_advisor/
