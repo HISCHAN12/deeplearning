@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TFT Meta Deck Advisor</title>
+    <title>TFT Recording Analysis and Deep Learning Advisor</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,12 +11,13 @@
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow">Deep Learning Term Project</p>
-          <h1>TFT Meta Deck Clustering and Action Advisor</h1>
+          <h1>TFT Recording Analysis and Deep Learning Advisor</h1>
           <p>
-            A course project that applies autoencoders, convolutional board
-            features, and feedforward networks to predict Teamfight Tactics
-            placement and recommend the next strategic action.
+            An end-to-end prototype that applies representation learning,
+            spatial board features, and a feedforward neural network to predict
+            TFT placement and generate reference action recommendations.
           </p>
+          <p class="student">Heechan Jung · Student ID 22000708</p>
           <div class="links">
             <a href="https://youtu.be/YOUR_VIDEO_ID">YouTube Demo</a>
             <a href="https://github.com/HISCHAN12/deeplearning">GitHub Repository</a>
@@ -30,57 +31,145 @@
         </div>
       </section>
 
-      <section class="content">
-        <h2>Project Content</h2>
-        <div class="grid">
-          <article>
-            <h3>Introduction</h3>
-            <p>
-              TFT decisions combine champions, traits, items, economy, augments,
-              and positioning. This project treats those choices as high-dimensional
-              game-state data.
-            </p>
-          </article>
-          <article>
-            <h3>Task and Method</h3>
-            <p>
-              The model compresses deck states with an autoencoder, clusters
-              meta-decks, extracts board positioning features with convolutional
-              kernels, and predicts final placement with a feedforward network.
-            </p>
-          </article>
-          <article>
-            <h3>Experiments</h3>
-            <p>
-              A reproducible synthetic match-log generator is included for grading.
-              An offline OpenCV recording analyzer also produces a timeline of
-              placement and Top 4 probabilities without live recommendations.
-            </p>
-          </article>
-          <article>
-            <h3>Result Analysis</h3>
-            <p>
-              The advisor reports hold-out placement accuracy, predicted Top 4
-              probability, nearest cluster, recommended action, and expected
-              placement improvement.
-            </p>
-          </article>
-          <article>
-            <h3>Conclusion</h3>
-            <p>
-              The project provides a manual live prototype and a policy-safe
-              offline recording analyzer. Automatic video analysis uses visual
-              board proxies and is not a trained champion or OCR detector.
-            </p>
-          </article>
-          <article>
-            <h3>References</h3>
-            <p>
-              Deep Learning textbook chapters 6, 7, 8, 9, and 14, plus related
-              TFT prediction and advisor repositories.
-            </p>
-          </article>
-        </div>
+      <section class="paper">
+        <article>
+          <h2>Abstract</h2>
+          <p>
+            This project analyzes Teamfight Tactics game states with a NumPy
+            autoencoder, convolution-style spatial features, and a feedforward
+            placement classifier. It predicts final placement and Top 4
+            probability, then generates a reference action. An offline OpenCV
+            pipeline samples a recorded match and creates a time-series HTML
+            report. The current implementation is a research prototype trained
+            on synthetic data, not a production game assistant.
+          </p>
+        </article>
+
+        <article>
+          <h2>1. Introduction</h2>
+          <p>
+            TFT combines composition, traits, items, augments, economy, level,
+            and board positioning. Their non-linear interactions make the game
+            a useful task for representation learning, spatial feature
+            extraction, multi-class classification, and recommendation.
+          </p>
+          <p>
+            The objective is to demonstrate how deep learning concepts can turn
+            a high-dimensional game state into understandable predictions and
+            strategic reference information.
+          </p>
+        </article>
+
+        <article>
+          <h2>2. Task and Method</h2>
+          <div class="columns">
+            <div>
+              <h3>Tasks</h3>
+              <ul>
+                <li>Predict final placement from 1st to 8th.</li>
+                <li>Estimate the probability of finishing in the Top 4.</li>
+                <li>Recommend level up, reroll, save gold, equip an item, or reposition a carry.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Model Pipeline</h3>
+              <ol>
+                <li>Multi-hot encoding for champions, traits, items, and augments.</li>
+                <li>Autoencoder for an eight-dimensional deck embedding.</li>
+                <li>K-means clustering for similar meta-deck groups.</li>
+                <li>Fixed 3x3 convolution-style filters for the 4x7 board.</li>
+                <li>Feedforward network with ReLU and Softmax outputs.</li>
+              </ol>
+            </div>
+          </div>
+        </article>
+
+        <article>
+          <h2>3. Recording Analysis</h2>
+          <p>
+            OpenCV samples a selected TFT recording at a configurable interval.
+            The center board region is divided into a 4x7 grid. HSV saturation,
+            brightness, Canny edge density, occupied-cell count, and
+            frame-to-frame activity are converted into visual proxy features.
+          </p>
+          <p>
+            Each timestamp receives eight placement probabilities, a Top 4
+            probability, visual board strength, and a reference action with an
+            explanation. The result is saved as JSON and an HTML timeline.
+          </p>
+          <div class="notice">
+            The analyzer does not recognize exact champions, items, health, or
+            gold. Recommendations use estimated visual proxies and must not be
+            interpreted as verified real-game strategy.
+          </div>
+        </article>
+
+        <article>
+          <h2>4. Experiments</h2>
+          <p>
+            The experiment uses 1,800 reproducible synthetic records with an
+            80/20 hold-out split. The generator defines controlled relationships
+            between game state, action, board strength, and placement while
+            preserving both Top 4 and bottom 4 examples.
+          </p>
+          <div class="metrics">
+            <div><strong>1,440</strong><span>Training samples</span></div>
+            <div><strong>360</strong><span>Hold-out samples</span></div>
+            <div><strong>23.1%</strong><span>Exact placement</span></div>
+            <div><strong>67.8%</strong><span>Top 4 accuracy</span></div>
+          </div>
+          <p>
+            The video experiment samples a complete recording every five
+            seconds and checks whether placement probabilities and reference
+            actions respond to changing visual board signals.
+          </p>
+        </article>
+
+        <article>
+          <h2>5. Result Analysis</h2>
+          <p>
+            Exact placement is an eight-class problem and is harder than binary
+            Top 4 prediction. The 67.8% Top 4 result indicates that the network
+            recovers part of the controlled synthetic relationship between
+            game state and outcome. It is not evidence of 67.8% accuracy on
+            real TFT matches.
+          </p>
+          <p>
+            The recording pipeline produces changing probabilities and can
+            output all five reference action categories. This verifies that
+            video extraction, feature construction, prediction, and
+            recommendation are connected end to end. Strategic correctness
+            requires future evaluation using labeled real-match states.
+          </p>
+        </article>
+
+        <article>
+          <h2>6. Conclusion</h2>
+          <p>
+            The project demonstrates autoencoder representation learning,
+            spatial feature extraction, regularized feedforward classification,
+            clustering, and recommendation in one reproducible TFT prototype.
+            Its main contribution is the complete implementation and analysis
+            workflow rather than production-level game accuracy.
+          </p>
+          <p>
+            Future work includes Riot API data collection, champion and item
+            detection, HUD OCR, a trainable CNN, temporal LSTM or Transformer
+            modeling, and evaluation on real held-out matches.
+          </p>
+        </article>
+
+        <article>
+          <h2>7. References</h2>
+          <ul class="references">
+            <li>Goodfellow, Bengio, and Courville, <em>Deep Learning</em>, Chapters 6, 7, 8, 9, and 14.</li>
+            <li><a href="https://developer.riotgames.com/">Riot Developer Portal</a>.</li>
+            <li><a href="https://github.com/rndmagtanong/ph_tft">rndmagtanong/ph_tft</a>.</li>
+            <li><a href="https://github.com/Mattbusel/tft-synapse">Mattbusel/tft-synapse</a>.</li>
+            <li><a href="https://github.com/KennethLeeJE8/tftanalysis_set3">KennethLeeJE8/tftanalysis_set3</a>.</li>
+            <li><a href="https://docs.opencv.org/">OpenCV Documentation</a>.</li>
+          </ul>
+        </article>
       </section>
     </main>
   </body>
