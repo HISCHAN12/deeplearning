@@ -58,7 +58,7 @@ outputs/video_analysis/video_analysis.html
 - 1~8등 확률 분포
 - 시간대별 Top 4 확률 그래프
 
-다음 행동 추천은 녹화 영상 모드에서 표시하지 않는다.
+각 시점의 시각적 보드 강도와 변화량을 이용한 참고용 다음 행동 추천도 표시한다.
 
 ## 6. 사용 알고리즘
 
@@ -67,15 +67,19 @@ outputs/video_analysis/video_analysis.html
 3. 4×7 grid 분할
 4. 각 칸의 HSV saturation, brightness, Canny edge density 계산
 5. 프레임 차이로 전투·화면 변화량 계산
-6. CNN-style board feature와 시각 보드 강도 생성
-7. Autoencoder embedding, feedforward placement model로 1~8등 확률 계산
-8. 1~4등 확률을 합산하여 Top 4 확률 계산
+6. 영상 전체 시각 신호의 10~90 백분위 범위를 기준으로 상대 보드 강도 정규화
+7. CNN-style board feature와 시각 보드 강도 생성
+8. Autoencoder embedding, feedforward placement model로 1~8등 확률 계산
+9. Temperature calibration으로 합성 모델의 과도한 확신 완화
+10. 1~4등 확률을 합산하여 Top 4 확률 계산
+11. 시각적 상대 강도와 변화량을 상태 proxy로 변환하여 참고 행동 계산
 
 ## 7. 현재 한계
 
 - 정확한 챔피언 종류를 인식하지 않는다.
 - 아이템과 증강체를 인식하지 않는다.
 - 체력과 골드를 OCR로 읽지 않는다.
+- 행동 추천에 사용되는 체력과 골드는 실제 HUD 값이 아니라 시각적 강도로 만든 proxy 값이다.
 - 영상 중앙이 항상 보드라는 가정을 사용한다.
 - 실제 영상으로 학습한 객체 탐지 모델이 아니라 시각 특징 기반 prototype이다.
 - 모델 학습 데이터는 합성 데이터이므로 실제 승부 확률로 해석하면 안 된다.

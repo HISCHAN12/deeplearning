@@ -13,8 +13,10 @@ from src.tft_advisor.overlay_advisor import display_values
 from src.tft_advisor.synthetic_data import ACTIONS, generate_matches
 from src.tft_advisor.video_analyzer import (
     RecordingAnalyzer,
+    calibrate_probabilities,
     extract_board_grid,
     save_report,
+    select_video_action,
 )
 
 
@@ -97,6 +99,24 @@ class AdvisorTest(unittest.TestCase):
         self.assertGreaterEqual(np.count_nonzero(board_grid), 1)
         self.assertEqual(len(bounds), 4)
 
+    def test_video_probability_calibration_reduces_overconfidence(self) -> None:
+        probabilities = np.array([0.82, 0.08, 0.04, 0.02, 0.01, 0.01, 0.01, 0.01])
+
+        calibrated = calibrate_probabilities(probabilities)
+
+        self.assertTrue(np.isclose(calibrated.sum(), 1.0))
+        self.assertLess(calibrated.max(), probabilities.max())
+        self.assertEqual(int(calibrated.argmax()), int(probabilities.argmax()))
+
+    def test_video_action_responds_to_visual_state(self) -> None:
+        weak_action, _ = select_video_action("level_up", 0.4, 0.1, 0.0, 0.2)
+        strong_action, _ = select_video_action("roll_down", 0.4, 0.9, 0.0, 0.2)
+        falling_action, _ = select_video_action("hold_economy", 0.6, 0.6, -0.3, 0.5)
+
+        self.assertEqual(weak_action, "roll_down")
+        self.assertEqual(strong_action, "hold_economy")
+        self.assertEqual(falling_action, "reposition_carry")
+
     def test_recording_analyzer_creates_timeline_and_report(self) -> None:
         with TemporaryDirectory() as directory:
             directory_path = Path(directory)
@@ -129,9 +149,13 @@ class AdvisorTest(unittest.TestCase):
             )
 
             self.assertGreaterEqual(len(predictions), 2)
+            self.assertIn(predictions[0].recommended_action, ACTIONS)
+            self.assertTrue(predictions[0].recommended_action_label)
+            self.assertTrue(predictions[0].recommendation_reason)
             self.assertTrue(json_path.is_file())
             self.assertTrue(html_path.is_file())
             self.assertIn("Top 4", html_path.read_text(encoding="utf-8"))
+            self.assertIn("참고 행동", html_path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

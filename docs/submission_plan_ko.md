@@ -63,7 +63,7 @@ python3 -m src.tft_advisor.live_advisor
 
 ### 추가 구현: 녹화 영상 자동 승부 예측
 
-`python -m src.tft_advisor.video_analysis_app`을 실행하면 TFT 녹화 영상을 선택할 수 있다. OpenCV가 일정 간격으로 프레임을 추출하고 중앙 보드 영역의 색상, 윤곽선, 활성 칸, 프레임 변화량을 분석한다. 결과는 시간대별 예상 등수와 Top 4 확률 그래프로 저장되며, 라이브 행동 추천은 제공하지 않는다.
+`python -m src.tft_advisor.video_analysis_app`을 실행하면 TFT 녹화 영상을 선택할 수 있다. OpenCV가 일정 간격으로 프레임을 추출하고 중앙 보드 영역의 색상, 윤곽선, 활성 칸, 프레임 변화량을 분석한다. 결과는 시간대별 예상 등수, Top 4 확률, 참고 행동 추천과 함께 저장된다. 행동 추천은 실제 HUD를 인식한 라이브 추천이 아니라 시각적 상태 proxy를 사용한 오프라인 추정이다.
 
 ### 발표에서 보여줄 데모 흐름
 

@@ -23,10 +23,10 @@ Teamfight Tactics combines champions, traits, items, augments, economy, leveling
 
 This repository provides two related course prototypes:
 
-1. **Offline recording analysis:** samples a completed TFT recording from beginning to end and produces a timeline of predicted placement and Top 4 probability.
+1. **Offline recording analysis:** samples a completed TFT recording from beginning to end and produces a timeline of predicted placement, Top 4 probability, and visual-proxy action recommendations.
 2. **Manual advisor demo:** accepts manually selected composition, board style, and game-flow values to demonstrate placement prediction and cluster-based action recommendation.
 
-The automatic recording analyzer is the preferred policy-safe demonstration. It does not analyze a live match or provide live recommendations.
+The automatic recording analyzer is the preferred policy-safe demonstration. It does not analyze a live match. Its offline action suggestions are reference estimates rather than live recommendations based on recognized HUD data.
 
 ## Current Capabilities
 
@@ -50,6 +50,7 @@ It automatically:
 - Divides the visual board into a 4x7 grid.
 - Measures saturation, brightness, Canny edge density, occupied-cell count, and frame-to-frame activity.
 - Produces 1st-to-8th placement probabilities and Top 4 probability for each sampled timestamp.
+- Produces a reference action recommendation from estimated visual board strength and its change over time.
 - Saves a JSON result and an HTML probability graph.
 
 The full report is shown after analysis completes. Predictions are calculated throughout the recording, but they are not streamed during gameplay.
@@ -121,12 +122,12 @@ The current model is trained on 1,800 reproducible synthetic records:
 
 - Training samples: 1,440
 - Hold-out samples: 360
-- Exact-placement accuracy: approximately 32.5%
-- Top 4 accuracy: approximately 96.1%
+- Exact-placement accuracy: approximately 23.1%
+- Top 4 accuracy: approximately 67.8%
 
-The synthetic generator explicitly defines relationships between health, economy, board strength, actions, and placement. The high Top 4 score mainly demonstrates recovery of those controlled rules. It is not evidence of real TFT accuracy.
+The synthetic generator explicitly defines relationships between health, economy, board strength, actions, and placement. Its score distribution is centered to include both Top 4 and bottom 4 examples instead of producing an artificially high Top 4 rate. These hold-out results measure recovery of controlled synthetic rules and are not evidence of real TFT accuracy.
 
-The recording analyzer is also a visual prototype. It is not trained on labeled TFT screenshots and does not identify exact champions, items, augments, health, or gold.
+The recording analyzer is also a visual prototype. It normalizes board-activity signals against the 10th-to-90th percentile range of the selected recording and applies temperature calibration to reduce overconfident probabilities. Its action recommendation uses visual proxy state, not recognized HUD values. It is not trained on labeled TFT screenshots and does not identify exact champions, items, augments, health, or gold.
 
 ## Installation
 

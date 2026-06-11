@@ -233,7 +233,16 @@ def generate_matches(n_matches: int = 1600, seed: int = 7) -> List[MatchRecord]:
             + 0.12 * (state.board_strength_delta / 5.0)
             - 0.12 * (stage / 7.0)
         )
-        score = archetype_base + contextual_effects[action] + board_bonus + state_score + rng.normal(0, 0.2)
+        # Center the synthetic outcomes so the training set contains meaningful
+        # examples from both the Top 4 and bottom 4 classes.
+        score = (
+            archetype_base
+            + contextual_effects[action]
+            + board_bonus
+            + state_score
+            - 1.35
+            + rng.normal(0, 0.35)
+        )
         placement = _placement_from_score(score, rng)
 
         records.append(MatchRecord(deck_vector, board_grid, state.to_vector(), action, placement, archetype))

@@ -31,7 +31,7 @@ Deep Learning 수업 Term Project이며 주제는 TFT 게임 데이터와 녹화
 시간대별 예상 등수와 Top 4 확률 HTML/JSON 보고서 생성
 ```
 
-녹화 영상 모드에서는 다음 행동 추천을 표시하지 않는다.
+녹화 영상 모드에서는 각 시점의 시각적 보드 강도와 변화량을 이용한 참고 행동 추천도 표시한다. 이 추천은 실제 체력·골드·아이템 OCR 결과가 아니라 시각적 상태 proxy를 사용한다.
 
 ## 현재 구현
 
@@ -87,8 +87,9 @@ python -m src.tft_advisor.video_analyzer "C:\path\to\tft_video.mp4" --interval 5
 ## 중요 한계
 
 - 실제 빅데이터가 아니라 1,800개 합성 데이터로 학습
-- exact placement 약 32.5%, 합성 Top 4 약 96.1%
-- 높은 Top 4 성능은 합성 규칙을 복원한 결과이며 실제 TFT 성능이 아님
+- exact placement 약 23.1%, 합성 Top 4 약 67.8%
+- Top 4와 Bottom 4 데이터가 모두 포함되도록 합성 점수 분포를 보정함
+- 해당 성능은 합성 규칙을 복원한 결과이며 실제 TFT 성능이 아님
 - 영상에서 정확한 챔피언과 아이템을 인식하지 않음
 - 체력과 골드 OCR이 없음
 - 실제 학습형 CNN/YOLO가 아니라 OpenCV 시각 특징과 고정 CNN-style feature 사용

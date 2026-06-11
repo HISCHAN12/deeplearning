@@ -14,7 +14,7 @@ TFT는 단순히 강한 챔피언 하나를 고르는 게임이 아니라, 챔�
 
 마지막 단계는 action recommendation입니다. 현재 덱이 어느 cluster에 가까운지 찾고, 그 cluster 안에서 과거에 어떤 행동이 평균 등수와 Top 4 rate를 개선했는지 분석합니다. 추천 후보는 level up, roll down, hold economy, slam item, reposition carry입니다. 예를 들어 bruiser frontline cluster에서는 hold economy가 좋은 평균 성적을 냈다면, advisor는 hold economy를 추천합니다.
 
-이제 데모를 보겠습니다. 터미널에서 `python3 -m src.tft_advisor.train_demo`를 실행하면 합성 match log가 생성되고, 데이터가 80퍼센트 학습용과 20퍼센트 평가용으로 분리됩니다. 출력에는 reconstruction loss, hold-out placement accuracy, hold-out Top 4 accuracy, sample archetype, predicted placement, predicted Top 4 probability, recommended action이 표시됩니다. 고정 seed 기준 정확한 등수 accuracy는 약 0.33, Top 4 accuracy는 약 0.96입니다. 이 높은 Top 4 수치는 체력과 보드 강도 같은 상태-결과 관계가 명시된 합성 데이터에서 규칙을 복원한 결과이며 실제 TFT 성능을 의미하지 않습니다.
+이제 데모를 보겠습니다. 터미널에서 `python3 -m src.tft_advisor.train_demo`를 실행하면 합성 match log가 생성되고, 데이터가 80퍼센트 학습용과 20퍼센트 평가용으로 분리됩니다. 출력에는 reconstruction loss, hold-out placement accuracy, hold-out Top 4 accuracy, sample archetype, predicted placement, predicted Top 4 probability, recommended action이 표시됩니다. 고정 seed 기준 정확한 등수 accuracy는 약 0.23, Top 4 accuracy는 약 0.68입니다. 합성 데이터는 Top 4와 Bottom 4 사례가 모두 포함되도록 점수 분포를 보정했습니다. 이 수치는 체력과 보드 강도 같은 상태-결과 관계가 명시된 합성 데이터에서 규칙을 복원한 결과이며 실제 TFT 성능을 의미하지 않습니다.
 
 이 프로젝트의 실제 데모 방식은 Windows always-on-top 오버레이입니다. `python -m src.tft_advisor.overlay_advisor`를 실행하면 반투명한 오버레이가 TFT 위에 표시됩니다. 사용자는 현재 조합과 보드 배치뿐 아니라 실제 체력, 골드, 레벨과 게임 흐름을 입력합니다. `현재 게임 상태 반영`을 누르면 이전 스냅샷과 비교한 변화량까지 모델에 반영되어 예측과 추천 이유가 갱신됩니다. Riot 클라이언트가 실행 중이면 local lockfile을 감지해 연결 상태를 표시하지만, 게임 화면 자체를 자동 인식하지는 않습니다.
 
