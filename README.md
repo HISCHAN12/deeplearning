@@ -13,7 +13,7 @@
 ## Project Links
 
 - GitHub Pages: `https://hischan12.github.io/deeplearning/`
-- YouTube demo: `https://youtu.be/YOUR_VIDEO_ID`
+- YouTube : youtube.com/watch?v=1gKApD5DP4Q&feature=youtu.be
 
 The YouTube placeholder must be replaced after the approximately seven-minute presentation video is uploaded.
 
