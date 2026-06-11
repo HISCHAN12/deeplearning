@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import queue
 import threading
-import tkinter as tk
-from tkinter import ttk
 from typing import Any
 
 from .live_advisor import LiveAdvisorApp
+
+tk: Any = None
+ttk: Any = None
 
 
 ARCHETYPE_LABELS = {
@@ -361,6 +362,18 @@ class OverlayAdvisor:
 
 
 def main() -> None:
+    global tk, ttk
+    try:
+        import tkinter as tk_module
+        from tkinter import ttk as ttk_module
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "Tkinter is required for overlay mode. On Windows, install Python from python.org "
+            "with the tcl/tk option enabled. You can still run the browser advisor with "
+            "`python -m src.tft_advisor.live_advisor`."
+        ) from exc
+    tk = tk_module
+    ttk = ttk_module
     print("TFT 수동 입력형 실시간 오버레이를 시작합니다.", flush=True)
     print("TFT는 창 모드 또는 테두리 없는 창 모드를 권장합니다.", flush=True)
     root = tk.Tk()
