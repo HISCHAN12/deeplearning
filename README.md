@@ -4,9 +4,9 @@
 
 - Student ID: 22000708
 - Name: Heechan Jung
-- Course: Deep Learning Term Project
 
 ## Project Title
+
 
 **A Deep Learning Framework for TFT Recording Analysis, Placement Prediction, and Strategic Action Recommendation**
 
@@ -15,11 +15,6 @@
 - GitHub Pages: `https://hischan12.github.io/deeplearning/`
 - YouTube : youtube.com/watch?v=1gKApD5DP4Q&feature=youtu.be
 
-The YouTube placeholder must be replaced after the approximately seven-minute presentation video is uploaded.
-
-## Abstract
-
-This project presents a deep learning prototype for analyzing Teamfight Tactics (TFT) game states. The system predicts final placement and Top 4 probability, then recommends a reference action such as leveling, rerolling, saving gold, equipping an item, or repositioning a carry. A NumPy autoencoder learns a compact deck representation, fixed convolution-style filters encode the 4x7 board, and a feedforward neural network estimates placement probabilities. The project also includes an offline OpenCV pipeline that samples a recorded match and produces a time-series HTML report. Because the current model is trained on synthetic records and does not recognize the complete TFT user interface, all video predictions and actions are presented as prototype estimates rather than claims of real-game accuracy.
 
 ## Introduction
 
@@ -38,13 +33,12 @@ The project addresses three connected tasks:
 
 1. Predict one of eight possible final placements.
 2. Estimate the probability of finishing in the Top 4.
-3. Recommend a reference next action from `level_up`, `roll_down`, `hold_economy`, `slam_item`, and `reposition_carry`.
+3. Recommend a reference next action from `level_up`, `roll_down`, `hold_economy`, `slam_item`, and `reposition_carry(champions)`.
 
 The input representation combines a multi-hot deck vector, a 4x7 board grid, and game-state features. The autoencoder compresses the deck vector into a latent representation. K-means groups similar latent vectors into meta-deck clusters. Fixed convolution-style kernels summarize spatial board patterns, and a feedforward neural network combines the latent, spatial, and state features to output eight Softmax placement probabilities.
 
 For recorded-video analysis, OpenCV samples frames at a configurable interval. The center board region is divided into a 4x7 grid, and saturation, brightness, edge density, occupancy, and frame-to-frame activity are measured. These signals are normalized within the selected recording and converted into visual proxy features. The same placement model then produces a probability timeline, while a transparent rule layer combines visual strength, change, activity, game progress, and cluster statistics to produce a reference action.
 
-## Current Capabilities
 
 ### Offline Recording Analyzer
 
@@ -118,9 +112,8 @@ The placement predictor combines:
 
 It outputs eight Softmax probabilities, one for each possible final placement.
 
-```text
-Top 4 probability = P(1st) + P(2nd) + P(3rd) + P(4th)
-```
+ -  Top 4 probability = P(1st) + P(2nd) + P(3rd) + P(4th)
+
 
 ### 6. Training Techniques
 
@@ -164,105 +157,14 @@ The recording analyzer is also a visual prototype. It normalizes board-activity 
 
 In the demonstration recording, predictions vary across timestamps instead of remaining at one constant value, and all five reference action categories can appear as visual strength and activity change. This shows that the complete analysis pipeline is connected. It does not establish that each action is strategically correct in a real TFT match.
 
-## Installation
-
-Python 3.10 or later is recommended.
-
-```powershell
-git clone https://github.com/HISCHAN12/deeplearning.git
-cd deeplearning
-python -m pip install -r requirements.txt
-```
 
 Dependencies:
 
 - NumPy
 - OpenCV headless
 
-## Run the Recording Analyzer
 
-### Desktop App
 
-```powershell
-python -m src.tft_advisor.video_analysis_app
-```
-
-Then:
-
-1. Select a TFT recording.
-2. Choose the frame interval, normally five seconds.
-3. Click `녹화 영상 분석`.
-4. Wait for the whole video to be processed.
-5. Open the generated report.
-
-### Command Line
-
-```powershell
-python -m src.tft_advisor.video_analyzer "C:\Videos\tft_game.mp4" --interval 5
-```
-
-Generated files:
-
-```text
-outputs/video_analysis/.../video_analysis.json
-outputs/video_analysis/.../video_analysis.html
-```
-
-See [`docs/video_analysis_ko.md`](docs/video_analysis_ko.md) for Korean instructions.
-
-## Run the Other Prototypes
-
-Train and print the synthetic-data demo:
-
-```powershell
-python -m src.tft_advisor.train_demo
-```
-
-Run the local browser advisor:
-
-```powershell
-python -m src.tft_advisor.live_advisor
-```
-
-Open `http://127.0.0.1:8000`.
-
-Run the Windows manual-input overlay:
-
-```powershell
-python -m src.tft_advisor.overlay_advisor
-```
-
-## Tests
-
-```powershell
-python -m unittest discover -s tests
-```
-
-The tests cover:
-
-- Placement and Top 4 probability outputs
-- Game-state flow deltas
-- State-aware recommendation adjustments
-- Riot lockfile configuration
-- Overlay display translation
-- Video board-grid extraction
-- End-to-end video analysis and report creation
-
-## Repository Structure
-
-```text
-src/tft_advisor/
-  game_state.py          Manual game state and flow deltas
-  live_advisor.py        Local browser advisor
-  models.py              NumPy autoencoder and feedforward model
-  overlay_advisor.py     Windows manual-input overlay
-  recommender.py         Training, clustering, prediction, recommendation
-  state_encoder.py       Deck and board encoders
-  synthetic_data.py      Reproducible synthetic training records
-  train_demo.py          Console training demo
-  video_analyzer.py      Offline OpenCV recording analysis
-  video_analysis_app.py  Recording selection desktop UI
-```
 
 ## Scope and Limitations
 
@@ -282,24 +184,7 @@ This project demonstrates how multiple deep learning concepts can be combined fo
 
 The main contribution is an end-to-end, reproducible prototype rather than a production TFT assistant. The experiments confirm that the implementation can learn controlled synthetic relationships and generate changing predictions and reference actions from a recording. Reliable real-game deployment would require labeled TFT match states, trainable visual models, OCR, temporal modeling, and evaluation on real held-out matches.
 
-## Future Work
 
-- Collect real match histories through the Riot Developer API.
-- Build a labeled TFT screenshot and video-frame dataset.
-- Train YOLO/CNN models for champion and item recognition.
-- Add OCR for health, gold, level, and stage.
-- Replace fixed kernels with a trainable CNN.
-- Add an LSTM or Transformer for temporal recording analysis.
-- Validate placement probabilities on real held-out games.
-
-## Submission Checklist
-
-- Make the repository public.
-- Enable GitHub Pages.
-- Replace `YOUR_VIDEO_ID`.
-- Run the tests and recording analyzer.
-- Record the approximately seven-minute presentation.
-- Submit the public GitHub repository URL.
 
 ## References
 
